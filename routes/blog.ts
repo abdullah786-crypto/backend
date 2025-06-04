@@ -3,6 +3,8 @@ import appDataSource from '../datasource/app.datasource';
 import { BlogEntity } from '../entities/blog.entity';
 import { BlogDto } from '../dtos/blog.dto';
 import { validate, Validate } from 'class-validator';
+import { ILike } from 'typeorm';
+import { log } from 'console';
 
 const router: Router = Router();
 let blogDto = new BlogDto();
@@ -15,18 +17,32 @@ export const getPostById = async (id: any) => {
 
 router.get('/', async (req: Request, res: Response) => {
   try {
-    let blogs = await appDataSource
+    const { title, subtitle, page, limit } = req.query;
+    const pageNumber = Number(page) || 1;
+    const pageSize = Number(limit) || 10;
+    const skip = (pageNumber - 1) * pageSize;
+    const totalRecords = await appDataSource.getRepository(BlogEntity).count();
+    let blogsRepo = appDataSource
       .getRepository(BlogEntity)
       .createQueryBuilder('posts')
-      .leftJoinAndSelect('posts.comments', 'comment')
-      .getMany();
-    if (blogs && blogs.length > 0) {
-      console.log('Blogs data is', blogs);
-      res
-        .status(200)
-        .json({ message: 'Data fetched successfully', blogs: blogs });
+      .leftJoinAndSelect('posts.comments', 'comment');
+    if (subtitle || title) {
+      blogsRepo = blogsRepo
+        .andWhere({ title: ILike(`%${title}%`) })
+        .orWhere({ subtitle: ILike(`%${subtitle}%`) });
+    }
+    if (title || subtitle || page || limit) {
+      blogsRepo = blogsRepo.skip(skip).take(pageSize);
+    }
+    let blog = await blogsRepo.getMany();
+    if (blog) {
+      res.status(200).json({
+        message: 'Data fetched successfully',
+        blogs: blog,
+        totalRecords: totalRecords,
+      });
     } else {
-      res.status(404).json({ message: 'No any blogs items', blogs: blogs });
+      res.status(404).json({ message: 'No any blogs items' });
     }
   } catch (error: any) {
     res.status(500).json({ message: 'Failed to fetch blogs', error: error });
@@ -69,7 +85,6 @@ router.post('/', async (req: Request, res: Response) => {
       property: element.property,
       errors: Object.values(element.constraints),
     }));
-    console.log('messages are the', message);
     res.status(403).json({ message: 'Validation failed', errors: message });
   } else {
     try {
@@ -136,7 +151,6 @@ router.delete('/id=:id', async (req: Request, res: Response) => {
     let currentPost = await getPostById(currentPostId);
     if (currentPost) {
       await appDataSource.getRepository(BlogEntity).delete(currentPostId);
-      console.log('value of blog is');
       res.status(200).json({ message: 'Post deleted successfully' });
     } else {
       res.status(404).json({ messsge: 'Please enter valid post id' });
@@ -149,54 +163,3 @@ router.delete('/id=:id', async (req: Request, res: Response) => {
 });
 
 export default router;
-
-// for add case
-
-// let blog = await appDataSource
-//   .createQueryBuilder()
-//   .insert()
-//   .into(BlogEntity)
-//   .values({ ...req.body })
-//   .execute();
-// console.log('blog is ', blog);
-
-// for put case
-
-// console.log('current post is', currentPost);
-// let blog = await appDataSource
-//   .getRepository(BlogEntity)
-//   .createQueryBuilder()
-//   .update()
-//   .set({ ...req.body })
-//   .where('id = :id', { id: currentPostId })
-//   .execute()
-// res.status(200).json({ message: 'Post updated succesfully', blog: { ...blog } });
-
-// for delete case
-
-// let blog = await appDataSource
-//   .getRepository(BlogEntity)
-//   .createQueryBuilder()
-//   .delete()
-//   .where('id = :id', { id: currentPostId })
-//   .execute()
-//   .then(() => {
-//     res.status(200).json({ message: 'Post deleted successfully' });
-//   });
-
-// for post get by id
-
-// return await appDataSource
-//   .getRepository(BlogEntity)
-//   .createQueryBuilder('post')
-//   .leftJoinAndSelect('post.comments', 'comment')
-//   .select()
-//   .where('post.id = :id', { id: id })
-//   .getOne();
-
-// let post = await appDataSource
-//   .getRepository(BlogEntity)
-//   .createQueryBuilder('posts')
-//   .leftJoinAndSelect('posts.comments', 'comment')
-//   .where('posts.id = :id', { id: postId })
-//   .getOne();
