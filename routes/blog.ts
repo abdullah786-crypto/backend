@@ -1,35 +1,27 @@
 import { Router, Request, Response } from 'express';
-import appDataSource from '../datasource/app.datasource';
-import { BlogEntity } from '../entities/blog.entity';
 import { BlogDto } from '../dtos/blog.dto';
-import { validate, Validate } from 'class-validator';
-import { ILike } from 'typeorm';
-import { log } from 'console';
+import { validate } from 'class-validator';
+import { BlogRepository } from '../repositories/blog.repository';
+import { transformValidationErrors } from '../utils/validation-error.utils';
 
 const router: Router = Router();
-let blogDto = new BlogDto();
 
 export const getPostById = async (id: any) => {
-  return await appDataSource
-    .getRepository(BlogEntity)
-    .findOne({ where: { id: id } });
+  return await BlogRepository.getPostById(id);
 };
 
 router.get('/', async (req: Request, res: Response) => {
+  let blogDto = new BlogDto();
+
   try {
     const { title, subtitle, page, limit } = req.query;
     const pageNumber = Number(page) || 1;
     const pageSize = Number(limit) || 10;
     const skip = (pageNumber - 1) * pageSize;
-    const totalRecords = await appDataSource.getRepository(BlogEntity).count();
-    let blogsRepo = appDataSource
-      .getRepository(BlogEntity)
-      .createQueryBuilder('posts')
-      .leftJoinAndSelect('posts.comments', 'comment');
+    const totalRecords = await BlogRepository.getTotalBlogs();
+    let blogsRepo = BlogRepository.getAllPosts();
     if (subtitle || title) {
-      blogsRepo = blogsRepo
-        .andWhere({ title: ILike(`%${title}%`) })
-        .orWhere({ subtitle: ILike(`%${subtitle}%`) });
+      blogsRepo = BlogRepository.searchPost(title, subtitle);
     }
     if (title || subtitle || page || limit) {
       blogsRepo = blogsRepo.skip(skip).take(pageSize);
@@ -52,12 +44,7 @@ router.get('/', async (req: Request, res: Response) => {
 router.get('/id=:id', async (req: Request, res: Response) => {
   const postId = Number(req.params.id);
   try {
-    let blog = await appDataSource
-      .getRepository(BlogEntity)
-      .createQueryBuilder('post')
-      .leftJoinAndSelect('post.comments', 'comments')
-      .where({ id: postId })
-      .getOne();
+    let blog = await BlogRepository.getPostsByIdWithComments(postId);
 
     if (blog) {
       res.status(200).json({ message: 'Data fetch successfully', blogs: blog });
@@ -73,6 +60,7 @@ router.get('/id=:id', async (req: Request, res: Response) => {
 
 router.post('/', async (req: Request, res: Response) => {
   const { title, subtitle, image, blogData } = req.body;
+  let blogDto = new BlogDto();
 
   blogDto.title = title;
   blogDto.image = image;
@@ -81,16 +69,15 @@ router.post('/', async (req: Request, res: Response) => {
 
   const error = await validate(blogDto);
   if (error.length > 0) {
-    const message = error.map((element: any) => ({
-      property: element.property,
-      errors: Object.values(element.constraints),
-    }));
-    res.status(403).json({ message: 'Validation failed', errors: message });
+    let messages = transformValidationErrors(error);
+    // const message = error.map((element: any) => ({
+    //   property: element.property,
+    //   errors: Object.values(element.constraints),
+    // }));
+    res.status(403).json({ message: 'Validation failed', errors: messages });
   } else {
     try {
-      const blog = await appDataSource
-        .getRepository(BlogEntity)
-        .save({ ...req.body });
+      const blog = await BlogRepository.addPost({ ...req.body });
       if (blog) {
         res
           .status(200)
@@ -108,6 +95,7 @@ router.post('/', async (req: Request, res: Response) => {
 
 router.put('/id=:id', async (req: Request, res: Response) => {
   const currentPostId = req.params.id;
+  let blogDto = new BlogDto();
 
   const { title, subtitle, blogData, image } = req.body;
 
@@ -118,18 +106,15 @@ router.put('/id=:id', async (req: Request, res: Response) => {
 
   const error = await validate(blogDto);
   if (error.length > 0) {
-    const messages = error.map((val: any) => ({
-      property: val.property,
-      error: Object.values(val.constraints),
-    }));
+    const messages = transformValidationErrors(error)
     res.status(403).json({ message: 'Validation Failed', errors: messages });
   } else {
     try {
       let currentPost = await getPostById(currentPostId);
       if (currentPost) {
-        const blog = await appDataSource
-          .getRepository(BlogEntity)
-          .update(currentPostId, { ...req.body });
+        const blog = await BlogRepository.updatePostById(currentPostId, {
+          ...req.body,
+        });
         res.status(200).json({
           message: 'Blog updated successfully',
           blog: { id: currentPostId, ...req.body },
@@ -150,7 +135,7 @@ router.delete('/id=:id', async (req: Request, res: Response) => {
   try {
     let currentPost = await getPostById(currentPostId);
     if (currentPost) {
-      await appDataSource.getRepository(BlogEntity).delete(currentPostId);
+      await BlogRepository.deletPostById(currentPostId);
       res.status(200).json({ message: 'Post deleted successfully' });
     } else {
       res.status(404).json({ messsge: 'Please enter valid post id' });

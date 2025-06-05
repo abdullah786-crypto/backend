@@ -1,4 +1,4 @@
-import { IsEmail, MinLength, MaxLength, IsNotEmpty, ValidateIf } from "class-validator";
+import { IsEmail, IsNotEmpty } from "class-validator";
 
 export class CommentDto {
 
@@ -10,5 +10,7 @@ export class CommentDto {
 
     @IsNotEmpty({message: 'Comment is required'})
     comment: any
+
+    
 
 }
