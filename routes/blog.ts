@@ -113,7 +113,6 @@ router.put('/id=:id', async (req: Request, res: Response) => {
         // let user = await UserRepository.getUserById(userId);
         const blog = await BlogRepository.updatePostById(currentPostId, {
           ...req.body,
-          // user: user
         });
         res.status(200).json({
           message: 'Blog updated successfully',
