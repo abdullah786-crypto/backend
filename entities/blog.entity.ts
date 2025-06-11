@@ -1,5 +1,6 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { CommentsEntity } from "./comments.entity";
+import { UserEntity } from "./user.entity";
 
 @Entity()
 export class BlogEntity {
@@ -18,6 +19,10 @@ export class BlogEntity {
 
     @Column('longtext')
     blogData: string
+
+    @ManyToOne(() => UserEntity, (usr) => usr.post)
+    @JoinColumn({name: 'userId'})
+    user: UserEntity
 
     @OneToMany(() => CommentsEntity, (com) => com.blogId)
     comments: CommentsEntity[]

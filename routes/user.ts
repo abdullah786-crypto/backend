@@ -59,5 +59,32 @@ router.post('/login', (req: Request, res: Response, next: NextFunction) => {
     });
   })(req, res, next);
 });
+// router.get('/logout', (req: Request, res: Response, next: NextFunction) => {
+//   req.logout((err) => {
+//     if (err) {
+//       return next(err);
+//     }
+//     req.session.destroy((err) => {
+//       // Destroy the session
+//       if (err) {
+//         return next(err);
+//       }
+//       res.status(200).json({ message: 'Logged out successfully.' });
+//     });
+//   });
+// });
+
+
+// router.get('/dashboard', (req: Request, res: Response) => {
+//   if (req.isAuthenticated()) {
+//     res.status(200).json({
+//       message: `Welcome to the dashboard, ${
+//         req.user ? (req.user as UserEntity).username : 'Guest'
+//       }!`,
+//     });
+//   } else {
+//     res.status(401).json({ message: 'Please log in to view this page.' });
+//   }
+// });
 
 export default router;

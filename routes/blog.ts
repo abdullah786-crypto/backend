@@ -3,6 +3,7 @@ import { BlogDto } from '../dtos/blog.dto';
 import { validate } from 'class-validator';
 import { BlogRepository } from '../repositories/blog.repository';
 import { transformValidationErrors } from '../utils/validation-error.utils';
+import { UserRepository } from '../repositories/user.repository';
 
 const router: Router = Router();
 
@@ -59,7 +60,7 @@ router.get('/id=:id', async (req: Request, res: Response) => {
 });
 
 router.post('/', async (req: Request, res: Response) => {
-  const { title, subtitle, image, blogData } = req.body;
+  const { title, subtitle, image, blogData, userId } = req.body;
   let blogDto = new BlogDto();
 
   blogDto.title = title;
@@ -70,14 +71,11 @@ router.post('/', async (req: Request, res: Response) => {
   const error = await validate(blogDto);
   if (error.length > 0) {
     let messages = transformValidationErrors(error);
-    // const message = error.map((element: any) => ({
-    //   property: element.property,
-    //   errors: Object.values(element.constraints),
-    // }));
     res.status(403).json({ message: 'Validation failed', errors: messages });
   } else {
     try {
-      const blog = await BlogRepository.addPost({ ...req.body });
+      let user = await UserRepository.getUserById(userId);
+      const blog = await BlogRepository.addPost({ ...req.body, user: user });
       if (blog) {
         res
           .status(200)
@@ -97,7 +95,7 @@ router.put('/id=:id', async (req: Request, res: Response) => {
   const currentPostId = req.params.id;
   let blogDto = new BlogDto();
 
-  const { title, subtitle, blogData, image } = req.body;
+  const { title, subtitle, blogData, image, userId } = req.body;
 
   blogDto.blogData = blogData;
   (blogDto.title = title),
@@ -106,14 +104,16 @@ router.put('/id=:id', async (req: Request, res: Response) => {
 
   const error = await validate(blogDto);
   if (error.length > 0) {
-    const messages = transformValidationErrors(error)
+    const messages = transformValidationErrors(error);
     res.status(403).json({ message: 'Validation Failed', errors: messages });
   } else {
     try {
       let currentPost = await getPostById(currentPostId);
       if (currentPost) {
+        // let user = await UserRepository.getUserById(userId);
         const blog = await BlogRepository.updatePostById(currentPostId, {
           ...req.body,
+          // user: user
         });
         res.status(200).json({
           message: 'Blog updated successfully',

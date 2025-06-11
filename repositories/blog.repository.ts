@@ -10,19 +10,21 @@ export const BlogRepository = {
   },
 
   async getTotalBlogs() {
-   return await blogRepository.count();
+    return await blogRepository.count();
   },
 
   getAllPosts() {
     return blogRepository
       .createQueryBuilder('posts')
-      .leftJoinAndSelect('posts.comments', 'comment');
+      .leftJoinAndSelect('posts.comments', 'comment')
+      .leftJoinAndSelect('posts.user', 'user');
   },
 
   searchPost(title: any, subtitle: any) {
     return blogRepository
       .createQueryBuilder('posts')
       .leftJoinAndSelect('posts.comments', 'comment')
+      .leftJoinAndSelect('posts.user', 'user')
       .andWhere({ title: ILike(`%${title}%`) })
       .orWhere({ subtitle: ILike(`%${subtitle}%`) });
   },
@@ -31,6 +33,7 @@ export const BlogRepository = {
     return await blogRepository
       .createQueryBuilder('post')
       .leftJoinAndSelect('post.comments', 'comments')
+      .leftJoinAndSelect('post.user', 'user')
       .where({ id: id })
       .getOne();
   },
@@ -40,11 +43,10 @@ export const BlogRepository = {
   },
 
   async updatePostById(currentPostId: any, data: any) {
-   return await blogRepository.update(currentPostId, data);
+    return await blogRepository.update(currentPostId, data);
   },
 
   async deletPostById(currentPostId: any) {
-   return await blogRepository.delete(currentPostId)
-  }
-  
+    return await blogRepository.delete(currentPostId);
+  },
 };
