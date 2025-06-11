@@ -8,6 +8,7 @@ export const BlogRepository = {
   async getPostById(id: any) {
     return await blogRepository.findOne({ where: { id: id } });
   },
+
   async getTotalBlogs() {
    return await blogRepository.count();
   },
@@ -39,10 +40,11 @@ export const BlogRepository = {
   },
 
   async updatePostById(currentPostId: any, data: any) {
-    await blogRepository.update(currentPostId, data);
+   return await blogRepository.update(currentPostId, data);
   },
 
   async deletPostById(currentPostId: any) {
    return await blogRepository.delete(currentPostId)
   }
+  
 };
