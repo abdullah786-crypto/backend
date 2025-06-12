@@ -21,10 +21,7 @@ export const BlogRepository = {
   },
 
   searchPost(title: any, subtitle: any) {
-    return blogRepository
-      .createQueryBuilder('posts')
-      .leftJoinAndSelect('posts.comments', 'comment')
-      .leftJoinAndSelect('posts.user', 'user')
+    return this.getAllPosts()
       .andWhere({ title: ILike(`%${title}%`) })
       .orWhere({ subtitle: ILike(`%${subtitle}%`) });
   },
